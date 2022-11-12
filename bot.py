@@ -8,6 +8,8 @@ db = DataBase()
 last_command = ['', '', '']
 login_as_admin = 0
 
+insert_values = ['', '', '', '', '', '', '']
+
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -30,16 +32,23 @@ def start(message):
     bot.send_message(message.chat.id, mess, reply_markup=markup)
 
 
-# @bot.message_handler(commands=['help'])
-# def help_bot(message):
-#     pass
+@bot.message_handler(commands=['help'])
+def help_bot(message):
+    mess = 'Проект Encyclopedia Of Alcohol Bot был разработан в целях выполнения задания поставленного преподавателем колледжа.' + '\n'
+    markup = tb.types.InlineKeyboardMarkup()
+    bot.send_message(message.chat.id, mess)
+    mess = 'Связь c разработчиком:'
+    btn = tb.types.InlineKeyboardButton('Мой telegram', url='https://t.me/Alex_codov')
+    markup.add(btn)
+    bot.send_message(message.chat.id, mess, reply_markup=markup)
 
 
 @bot.message_handler(content_types=['text'])
 def text(message):
-    global last_command, login_as_admin
+    global last_command, login_as_admin, insert_values
     markup = tb.types.ReplyKeyboardMarkup(resize_keyboard=True)
     db.open_connect()
+    user_condition = db.select_table('admin', 1, 0, ('user_condition',), ('id',), ('1',))[0][0]
     categories = db.select_table('category_alcohol', 0, 0, ('category',), '', '', '')
     categories_ids = db.select_table('subcategories_of_alcohol', 0, 0, ('category_id',), '', '', '')
     names_of_alcohols = db.select_table('subcategories_of_alcohol', 0, 0, ('name_of_alcohol',), '', '', '')
@@ -60,93 +69,44 @@ def text(message):
         for i in range(len(categories)):
             btn = tb.types.KeyboardButton(categories[i][0])
             markup.add(btn)
+        if user_condition == 1:
+            btnAddCategories = tb.types.KeyboardButton('Добавить категорию')
+            markup.add(btnAddCategories)
         btnStart = tb.types.KeyboardButton('/start')
         markup.add(btnStart)
         bot.send_message(message.chat.id, mess, reply_markup=markup)
 
     if message.text in str(categories[:]):
-        if message.text == categories[0][0]:
-            mess = 'Выберите подкатегорию крепких алкогольных напитков:'
-            count_names = categories_ids.count((1,))
-            f_index = categories_ids.index((1,))
-            l_index = 0
-            c = 0
-            for j in range(len(categories_ids)):
-                if categories_ids[j][0] == 1:
-                    c += 1
-                    if c == count_names:
-                        l_index = j
-                        break
-            for i in range(f_index, l_index + 1):
+        mess = 'Выберите нужную подкатегорию алкогольных напитков:'
+        db.open_connect()
+        category_id = db.select_table('category_alcohol', 1, 0, ('id',), ('category',), (f'{message.text}', ''))[0][0]
+        db.close_connect()
+        for i in range(len(categories_ids)):
+            if categories_ids[i][0] == category_id:
                 btn = tb.types.KeyboardButton(names_of_alcohols[i][0])
                 markup.add(btn)
-            btn_back = tb.types.KeyboardButton('Категории')
-            last_command[0] = 'Крепкие алкогольные напитки'
-            markup.add(btn_back)
-            bot.send_message(message.chat.id, mess, reply_markup=markup)
-
-        if message.text == categories[1][0]:
-            mess = 'Выберите подкатегорию среднеалкогольных напитков:'
-            count_names = categories_ids.count((2,))
-            f_index = categories_ids.index((2,))
-            l_index = 0
-            c = 0
-            for j in range(len(categories_ids)):
-                if categories_ids[j][0] == 2:
-                    c += 1
-                    if c == count_names:
-                        l_index = j
-                        break
-            for i in range(f_index, l_index + 1):
-                btn = tb.types.KeyboardButton(names_of_alcohols[i][0])
-                markup.add(btn)
-            btn_back = tb.types.KeyboardButton('Категории')
-            last_command[0] = 'Среднеалкогольные напитки'
-            markup.add(btn_back)
-            bot.send_message(message.chat.id, mess, reply_markup=markup)
-
-        if message.text == categories[2][0]:
-            mess = 'Выберите подкатегорию слабоалкогольных напитков:'
-            count_names = categories_ids.count((3,))
-            f_index = categories_ids.index((3,))
-            l_index = 0
-            c = 0
-            for j in range(len(categories_ids)):
-                if categories_ids[j][0] == 3:
-                    c += 1
-                    if c == count_names:
-                        l_index = j
-                        break
-            for i in range(f_index, l_index + 1):
-                btn = tb.types.KeyboardButton(names_of_alcohols[i][0])
-                markup.add(btn)
-            btn_back = tb.types.KeyboardButton('Категории')
-            last_command[0] = 'Слабоалкогольные напитки'
-            markup.add(btn_back)
-            bot.send_message(message.chat.id, mess, reply_markup=markup)
+        if user_condition == 1:
+            btnAddCategories = tb.types.KeyboardButton('Добавить подкатегорию')
+            markup.add(btnAddCategories)
+        btn_back = tb.types.KeyboardButton('Категории')
+        last_command[0] = categories[category_id - 1][0]
+        markup.add(btn_back)
+        bot.send_message(message.chat.id, mess, reply_markup=markup)
 
     # Подкатегории
     if message.text in str(names_of_alcohols[:]):
         sub_id = names_of_alcohols.index((f'{message.text}',))
         mess = f'{str(names_of_alcohols[sub_id][0])}:'
-        count_names_alc = sub_categories_ids.count((sub_id + 1,))
-        f_index = sub_categories_ids.index((sub_id + 1,))
-        l_index = 0
-        c = 0
-        for j in range(len(sub_categories_ids)):
-            if sub_categories_ids[j][0] == sub_id + 1:
-                c += 1
-                if c == count_names_alc:
-                    l_index = j
-                    break
-        for i in range(f_index, l_index + 1):
-            tmp = names_of_drinks[i][0]
-            btn = tb.types.KeyboardButton(tmp)
-            markup.add(btn)
-        # last_command = message.text ---> Разобраться
+        for i in range(len(sub_categories_ids)):
+            if sub_categories_ids[i][0] == sub_id + 1:
+                btn = tb.types.KeyboardButton(names_of_drinks[i][0])
+                markup.add(btn)
+        if user_condition == 1:
+            btnAddCategories = tb.types.KeyboardButton('Добавить алкогольный напиток')
+            markup.add(btnAddCategories)
         btn_back = tb.types.KeyboardButton(last_command[0])
-        last_command[1] = message.text
         markup.add(btn_back)
+        last_command[1] = message.text
         bot.send_message(message.chat.id, mess, reply_markup=markup)
 
     # Названия
@@ -167,7 +127,6 @@ def text(message):
         bot.send_photo(message.chat.id, str(photos[index_drink][0]))
         mess += 'Описание: ' + str(descriptions[index_drink][0])
         btn_back = tb.types.KeyboardButton(last_command[1])
-        last_command[2] = ''
         markup.add(btn_back)
         bot.send_message(message.chat.id, mess, reply_markup=markup)
 
@@ -204,10 +163,45 @@ def text(message):
             bot.send_message(message.chat.id, mess, reply_markup=markup)
             login_as_admin = 0
 
+    # Добавить категорию
+    if message.text == 'Добавить категорию' and user_condition == 1:
+        mess = 'Введите название новой категорию:'
+        markupInline = tb.types.InlineKeyboardMarkup(row_width=1)
+        btnInsert = tb.types.InlineKeyboardButton(text='Добавить категорию', callback_data='insert_categories')
+        markupInline.add(btnInsert)
+        bot.send_message(message.chat.id, mess, reply_markup=markupInline)
+    else:
+        insert_values[0] = str(message.text)
+
+    # Добавить подкатегорию
+    if message.text == 'Добавить подкатегорию' and user_condition == 1:
+        mess = 'Введите ключ категории и название новой подкатегории, через *:'
+        markupInline = tb.types.InlineKeyboardMarkup(row_width=1)
+        btnInsert = tb.types.InlineKeyboardButton(text='Добавить подкатегорию', callback_data='insert_subcategories')
+        markupInline.add(btnInsert)
+        bot.send_message(message.chat.id, mess, reply_markup=markupInline)
+    else:
+        insert_values = str(message.text).split('*')
+        pass
+
+    # Добавить название
+    if message.text == 'Добавить алкогольный напиток' and user_condition == 1:
+        mess = 'Введите ключ категории, ключ подкатегории, название напитка, количество алкоголя, описание, фото (ссылка) и цену, через *'
+        markupInline = tb.types.InlineKeyboardMarkup(row_width=1)
+        btnInsert = tb.types.InlineKeyboardButton(text='Добавить напиток', callback_data='insert_alcohol_drink')
+        markupInline.add(btnInsert)
+        bot.send_message(message.chat.id, mess, reply_markup=markupInline)
+    else:
+        insert_values = str(message.text).split('*')
+        pass
+
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
-    global login_as_admin
+    global login_as_admin, insert_values
+    db.open_connect()
+    user_condition = db.select_table('admin', 1, 0, ('user_condition',), ('id',), ('1',))[0][0]
+    db.close_connect()
     if call.message:
         if call.data == 'categories':
             db.open_connect()
@@ -218,6 +212,9 @@ def callback_query(call):
             for i in range(len(category_alcohol)):
                 btn = tb.types.KeyboardButton(category_alcohol[i][0])
                 markup.add(btn)
+            if user_condition == 1:
+                btnAddCategories = tb.types.KeyboardButton('Добавить категорию')
+                markup.add(btnAddCategories)
             btnStart = tb.types.KeyboardButton('/start')
             markup.add(btnStart)
             bot.send_message(call.message.chat.id, mess, reply_markup=markup)
@@ -236,6 +233,37 @@ def callback_query(call):
             db.update_table('admin', ('user_condition',), ('0',), ('id',), ('1',), )
             db.close_connect()
             mess = 'Выход произведён'
+            markup = tb.types.ReplyKeyboardMarkup(resize_keyboard=True)
+            btnStart = tb.types.KeyboardButton('/start')
+            markup.add(btnStart)
+            bot.send_message(call.message.chat.id, mess, reply_markup=markup)
+
+        if call.data == 'insert_categories':
+            db.open_connect()
+            db.insert_table('category_alcohol', ('category',), (insert_values[0],))
+            db.close_connect()
+            mess = 'Запись успешно добавлена'
+            markup = tb.types.ReplyKeyboardMarkup(resize_keyboard=True)
+            btnStart = tb.types.KeyboardButton('/start')
+            markup.add(btnStart)
+            bot.send_message(call.message.chat.id, mess, reply_markup=markup)
+
+        if call.data == 'insert_subcategories':
+            db.open_connect()
+            db.insert_table('subcategories_of_alcohol', ('category_id', 'name_of_alcohol',), (insert_values[0], insert_values[1],))
+            db.close_connect()
+            mess = 'Запись успешно добавлена'
+            markup = tb.types.ReplyKeyboardMarkup(resize_keyboard=True)
+            btnStart = tb.types.KeyboardButton('/start')
+            markup.add(btnStart)
+            bot.send_message(call.message.chat.id, mess, reply_markup=markup)
+
+        if call.data == 'insert_alcohol_drink':
+            db.open_connect()
+            db.insert_table('alcohol', ('category_id', 'subcategories_id', 'name_of_drink', 'alcohol_content', 'description', 'photo', 'price',),
+                            (insert_values[0], insert_values[1], insert_values[2], insert_values[3], insert_values[4], insert_values[5], insert_values[6]))
+            db.close_connect()
+            mess = 'Запись успешно добавлена'
             markup = tb.types.ReplyKeyboardMarkup(resize_keyboard=True)
             btnStart = tb.types.KeyboardButton('/start')
             markup.add(btnStart)
