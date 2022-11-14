@@ -99,7 +99,7 @@ class DataBase:
         count_fields = len(fields)
         cur = self.con.cursor()
         if count_fields == 1:
-            cur.execute(f'INSERT INTO {name} ({fields[0]}) VALUES ("{fields_values}")')
+            cur.execute(f'INSERT INTO {name} ({fields[0]}) VALUES ("{fields_values[0]}")')
             self.con.commit()
         elif count_fields > 1:
             str_result = f'INSERT INTO {name} ('
