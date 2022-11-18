@@ -1,3 +1,4 @@
+import time
 import datetime as dt
 import telebot as tb
 from random import choice
@@ -8,7 +9,7 @@ bot = tb.TeleBot('5381314744:AAE1H24pXros7KCVNVJiS8e4a607I32U6WM')
 db = DataBase()
 
 last_command = ['', '', '']
-login_as_admin = 0
+login_as_admin, password_as_admin = 0, 0
 
 insert_values, update_values = [''], ['']
 
@@ -36,13 +37,15 @@ def start(message):
         btnSuggestEntry = tb.types.InlineKeyboardButton(text='Предложить запись', callback_data='suggest_entry')
         markup.add(btnSuggestEntry, btnLogInAsAdmin)
     if user_condition == 1:
-        btnSuggestedEntries = tb.types.InlineKeyboardButton(text='Предложенные записи', callback_data='suggested_entries')
+        btnSuggestedEntries = tb.types.InlineKeyboardButton(text='Предложенные записи',
+                                                            callback_data='suggested_entries')
         btnExit = tb.types.InlineKeyboardButton(text='Выйти из аккаунта', callback_data='exit')
         markup.add(btnSuggestedEntries, btnExit)
     bot.send_message(message.chat.id, mess, reply_markup=markup)
     db.open_connect()
     now = dt.datetime.now()
-    db.insert_table('logs', ('user_name', 'action', 'performed_time'), (user_name, message.text, now.strftime('%d-%m-%Y %H:%M:%S')))
+    db.insert_table('logs', ('user_name', 'action', 'performed_time'),
+                    (user_name, message.text, now.strftime('%d-%m-%Y %H:%M:%S')))
     db.close_connect()
 
 
@@ -59,13 +62,14 @@ def help_bot(message):
     bot.send_message(message.chat.id, mess, reply_markup=markup)
     db.open_connect()
     now = dt.datetime.now()
-    db.insert_table('logs', ('user_name', 'action', 'performed_time'), (user_name, message.text, now.strftime('%d-%m-%Y %H:%M:%S')))
+    db.insert_table('logs', ('user_name', 'action', 'performed_time'),
+                    (user_name, message.text, now.strftime('%d-%m-%Y %H:%M:%S')))
     db.close_connect()
 
 
 @bot.message_handler(content_types=['text'])
 def text(message):
-    global last_command, login_as_admin, insert_values, update_values, request_values, is_category_random, user_name
+    global last_command, login_as_admin, password_as_admin, insert_values, update_values, request_values, is_category_random, user_name
     user_name = str(message.from_user.username)
     markup = tb.types.ReplyKeyboardMarkup(resize_keyboard=True)
     db.open_connect()
@@ -113,6 +117,7 @@ def text(message):
             markup.add(btnDeleteCategories)
         btnStart = tb.types.KeyboardButton('/start')
         markup.add(btnStart)
+        time.sleep(0.3)
         bot.send_message(message.chat.id, mess, reply_markup=markup)
 
     if message.text in str(categories[:]):
@@ -134,94 +139,112 @@ def text(message):
             markup.add(btnAddCategories, btnUpdateSubcategories)
             markup.add(btnDeleteCategories)
         btn_back = tb.types.KeyboardButton('Категории')
-        last_command[0] = categories[category_id][0]
+        last_command[0] = categories[category_id - 1][0]
         markup.add(btn_back)
         is_category_random[0] = message.text
+        time.sleep(0.3)
         bot.send_message(message.chat.id, mess, reply_markup=markup)
 
     # Подкатегории
     if message.text in str(names_of_alcohols[:]):
-        db.open_connect()
-        sub_id_subcategory = db.select_table('subcategories_of_alcohol', 1, 0, ('id',), ('name_of_alcohol',), (str(message.text),))[0][0]
-        sub_id = names_of_alcohols.index((f'{message.text}',))
-        db.close_connect()
-        mess = f'{str(names_of_alcohols[sub_id][0])}:'
-        for i in range(len(sub_categories_ids)):
-            if is_visible_a[i][0] == 1:
-                if sub_categories_ids[i][0] == sub_id_subcategory:
-                    btn = tb.types.KeyboardButton(names_of_drinks[i][0])
-                    markup.add(btn)
-        btnRandom = tb.types.KeyboardButton('Рандом подкатегории!')
-        markup.add(btnRandom)
-        if user_condition == 1:
-            btnAddCategories = tb.types.KeyboardButton('Добавить алкогольный напиток')
-            btnUpdateDrink = tb.types.KeyboardButton('Обновить алкогольный напиток')
-            btnDeleteCategories = tb.types.KeyboardButton('Удалить алкогольный напиток')
-            markup.add(btnAddCategories, btnUpdateDrink)
-            markup.add(btnDeleteCategories)
-        btn_back = tb.types.KeyboardButton(last_command[0])
-        markup.add(btn_back)
-        last_command[1] = message.text
-        is_subcategory_random[0] = message.text
-        bot.send_message(message.chat.id, mess, reply_markup=markup)
+        if last_command[0] != '':
+            db.open_connect()
+            sub_id_subcategory = \
+                db.select_table('subcategories_of_alcohol', 1, 0, ('id',), ('name_of_alcohol',), (str(message.text),))[0][0]
+            sub_id = names_of_alcohols.index((f'{message.text}',))
+            db.close_connect()
+            mess = f'{str(names_of_alcohols[sub_id][0])}:'
+            for i in range(len(sub_categories_ids)):
+                if is_visible_a[i][0] == 1:
+                    if sub_categories_ids[i][0] == sub_id_subcategory:
+                        btn = tb.types.KeyboardButton(names_of_drinks[i][0])
+                        markup.add(btn)
+            btnRandom = tb.types.KeyboardButton('Рандом подкатегории!')
+            markup.add(btnRandom)
+            if user_condition == 1:
+                btnAddCategories = tb.types.KeyboardButton('Добавить алкогольный напиток')
+                btnUpdateDrink = tb.types.KeyboardButton('Обновить алкогольный напиток')
+                btnDeleteCategories = tb.types.KeyboardButton('Удалить алкогольный напиток')
+                markup.add(btnAddCategories, btnUpdateDrink)
+                markup.add(btnDeleteCategories)
+            btn_back = tb.types.KeyboardButton(last_command[0])
+            markup.add(btn_back)
+            last_command[1] = message.text
+            is_subcategory_random[0] = message.text
+            time.sleep(0.3)
+            bot.send_message(message.chat.id, mess, reply_markup=markup)
+        else:
+            mess = 'К сожалению, что-то пошло не так. Попробуйте сначала!'
+            btnStart = tb.types.KeyboardButton('/start')
+            markup.add(btnStart)
+            time.sleep(0.3)
+            bot.send_message(message.chat.id, mess, reply_markup=markup)
 
     # Названия
     if message.text in str(names_of_drinks[:]) and not str(message.text).isdigit():
-
-        # db.open_connect()
-        # name_of_alcohol_id = db.select_table('alcohol', 1, 0, ('subcategories_id',), ('name_of_drink',), (f'{message.text}',), '')
-        # db.close_connect()
-
-        names_of_alcohols_list = []
-
-        for x in range(len(names_of_alcohols)):
-            for y in range(len(names_of_alcohols[x])):
-                names_of_alcohols_list.append(names_of_alcohols[x][y])
-
-        sub_id = names_of_alcohols_list.index(last_command[1])
-
-        index_drink = names_of_drinks.index((f'{message.text}',))
-        mess = f'{str(names_of_alcohols[sub_id][0])}: ' + str(
-            names_of_drinks[index_drink][0]) + f' {str(alcohols_contents[index_drink][0])}' + '\n'
-        mess += f'Стоимость ' + str(price[index_drink][0]) + '\n'
-        bot.send_photo(message.chat.id, str(photos[index_drink][0]))
-        mess += 'Описание: ' + str(descriptions[index_drink][0])
-        btn_back = tb.types.KeyboardButton(last_command[1])
-        markup.add(btn_back)
-        bot.send_message(message.chat.id, mess, reply_markup=markup)
+        if last_command[1] != '':
+            names_of_alcohols_list = []
+            for x in range(len(names_of_alcohols)):
+                for y in range(len(names_of_alcohols[x])):
+                    names_of_alcohols_list.append(names_of_alcohols[x][y])
+            sub_id = names_of_alcohols_list.index(last_command[1])
+            index_drink = names_of_drinks.index((f'{message.text}',))
+            mess = f'{str(names_of_alcohols[sub_id][0])}: ' + str(
+                names_of_drinks[index_drink][0]) + f' {str(alcohols_contents[index_drink][0])}' + '\n'
+            mess += f'Стоимость ' + str(price[index_drink][0]) + '\n'
+            mess += 'Описание: ' + str(descriptions[index_drink][0])
+            btn_back = tb.types.KeyboardButton(last_command[1])
+            markup.add(btn_back)
+            time.sleep(0.3)
+            bot.send_photo(message.chat.id, str(photos[index_drink][0]))
+            bot.send_message(message.chat.id, mess, reply_markup=markup)
+        else:
+            mess = 'К сожалению, что-то пошло не так. Попробуйте сначала!'
+            btnStart = tb.types.KeyboardButton('/start')
+            markup.add(btnStart)
+            time.sleep(0.3)
+            bot.send_message(message.chat.id, mess, reply_markup=markup)
 
     # Авторизация
-    if message.text == logins[0][0]:
-        if message.text in str(logins) and login_as_admin == 1:
-            for i in range(len(logins)):
-                if message.text == logins[i][0]:
-                    mess = 'Отлично! А теперь введите пароль:'
-                    bot.send_message(message.chat.id, mess)
-                    break
-        else:
-            mess = 'К сожалению, такого логина нет!'
-            btnStart = tb.types.KeyboardButton('/start')
-            markup.add(btnStart)
-            bot.send_message(message.chat.id, mess, reply_markup=markup)
-            login_as_admin = 0
+    # Пароль
+    if message.text == passwords[0][0] and password_as_admin == 1:
+        for i in range(len(passwords)):
+            if message.text == passwords[i][0]:
+                mess = 'Отлично! Вы успешно авторизировались как админ'
+                time.sleep(0.3)
+                bot.send_message(message.chat.id, mess)
+                db.open_connect()
+                db.update_table('admin', ('user_condition',), ('1',), ('id',), ('1',), )
+                db.close_connect()
+                start(message)
+                password_as_admin = 0
+                break
+    if message.text != passwords[0][0] and password_as_admin == 1:
+        mess = 'К сожалению, пароль неверный!'
+        btnStart = tb.types.KeyboardButton('/start')
+        markup.add(btnStart)
+        time.sleep(0.3)
+        bot.send_message(message.chat.id, mess, reply_markup=markup)
+        password_as_admin = 0
 
-    if message.text == passwords[0][0]:
-        if message.text in str(passwords) and login_as_admin == 1:
-            for i in range(len(passwords)):
-                if message.text == passwords[i][0]:
-                    mess = 'Отлично! Вы успешно авторизировались как админ'
-                    bot.send_message(message.chat.id, mess)
-                    db.open_connect()
-                    db.update_table('admin', ('user_condition',), ('1',), ('id',), ('1',),)
-                    db.close_connect()
-                    start(message)
-                    break
-        else:
-            mess = 'К сожалению, пароль неверный!'
-            btnStart = tb.types.KeyboardButton('/start')
-            markup.add(btnStart)
-            bot.send_message(message.chat.id, mess, reply_markup=markup)
-            login_as_admin = 0
+    # Логин
+    if message.text == logins[0][0] and login_as_admin == 1:
+        for i in range(len(logins)):
+            if message.text == logins[i][0]:
+                mess = 'Отлично! А теперь введите пароль:'
+                time.sleep(0.3)
+                bot.send_message(message.chat.id, mess)
+                password_as_admin = 1
+                login_as_admin = 0
+                break
+    if message.text != logins[0][0] and login_as_admin == 1:
+        mess = 'К сожалению, такого логина нет!'
+        btnStart = tb.types.KeyboardButton('/start')
+        markup.add(btnStart)
+        time.sleep(0.3)
+        bot.send_message(message.chat.id, mess, reply_markup=markup)
+        password_as_admin = 0
+        login_as_admin = 0
 
     # [0]:
     # Добавить категорию
@@ -230,6 +253,7 @@ def text(message):
         markupInline = tb.types.InlineKeyboardMarkup(row_width=1)
         btnInsert = tb.types.InlineKeyboardButton(text='Добавить категорию', callback_data='insert_categories')
         markupInline.add(btnInsert)
+        time.sleep(0.3)
         bot.send_message(message.chat.id, mess, reply_markup=markupInline)
     else:
         insert_values[0] = str(message.text)
@@ -240,6 +264,7 @@ def text(message):
         markupInline = tb.types.InlineKeyboardMarkup(row_width=1)
         btnInsert = tb.types.InlineKeyboardButton(text='Удалить категорию', callback_data='delete_category')
         markupInline.add(btnInsert)
+        time.sleep(0.3)
         bot.send_message(message.chat.id, mess, reply_markup=markupInline)
     else:
         update_values[0] = message.text
@@ -250,6 +275,7 @@ def text(message):
         markupInline = tb.types.InlineKeyboardMarkup(row_width=1)
         btnInsert = tb.types.InlineKeyboardButton(text='Удалить подкатегорию', callback_data='delete_subcategory')
         markupInline.add(btnInsert)
+        time.sleep(0.3)
         bot.send_message(message.chat.id, mess, reply_markup=markupInline)
     else:
         update_values[0] = message.text
@@ -258,8 +284,10 @@ def text(message):
     if message.text == 'Удалить алкогольный напиток' and user_condition == 1:
         mess = 'Введите ключ алкогольного напитка:'
         markupInline = tb.types.InlineKeyboardMarkup(row_width=1)
-        btnInsert = tb.types.InlineKeyboardButton(text='Удалить алкогольный напиток', callback_data='delete_alcohol_drink')
+        btnInsert = tb.types.InlineKeyboardButton(text='Удалить алкогольный напиток',
+                                                  callback_data='delete_alcohol_drink')
         markupInline.add(btnInsert)
+        time.sleep(0.3)
         bot.send_message(message.chat.id, mess, reply_markup=markupInline)
     else:
         update_values[0] = message.text
@@ -269,8 +297,10 @@ def text(message):
     if message.text == 'Предложить категорию':
         mess = 'Введите название новой категории:'
         markupInline = tb.types.InlineKeyboardMarkup(row_width=1)
-        btnRequestCategoryInline = tb.types.InlineKeyboardButton(text='Предложить категорию', callback_data='request_category')
+        btnRequestCategoryInline = tb.types.InlineKeyboardButton(text='Предложить категорию',
+                                                                 callback_data='request_category')
         markupInline.add(btnRequestCategoryInline)
+        time.sleep(0.3)
         bot.send_message(message.chat.id, mess, reply_markup=markupInline)
     else:
         request_values[0] = message.text
@@ -292,9 +322,11 @@ def text(message):
             btnAllow = tb.types.InlineKeyboardButton(text='Добавить запись', callback_data='insert_allow_category')
             btnBan = tb.types.InlineKeyboardButton(text='Удалить запись', callback_data='delete_ban_category')
             markupInline.add(btnAllow, btnBan)
+            time.sleep(0.3)
             bot.send_message(message.chat.id, mess, reply_markup=markupInline)
         else:
             mess += 'К сожалению предложенных записей нет, увы!'
+            time.sleep(0.3)
             bot.send_message(message.chat.id, mess)
     else:
         request_values[0] = message.text
@@ -304,21 +336,26 @@ def text(message):
         mess = 'Всего предложенных подкатегорий: '
         db.open_connect()
         request_id = db.select_table('subcategories_of_alcohol', 1, 0, ('id',), ('is_visible',), (0,), '')
-        request_categories_id = db.select_table('subcategories_of_alcohol', 1, 0, ('category_id',), ('is_visible',), (0,), '')
-        request_subcategories = db.select_table('subcategories_of_alcohol', 1, 0, ('name_of_alcohol',), ('is_visible',), (0,), '')
+        request_categories_id = db.select_table('subcategories_of_alcohol', 1, 0, ('category_id',), ('is_visible',),
+                                                (0,), '')
+        request_subcategories = db.select_table('subcategories_of_alcohol', 1, 0, ('name_of_alcohol',), ('is_visible',),
+                                                (0,), '')
         db.close_connect()
         if len(request_id) > 0:
             mess += str(len(request_subcategories)) + '\n'
             markupInline = tb.types.InlineKeyboardMarkup(row_width=2)
             for i in range(len(request_id)):
-                mess += 'id -> ' + str(request_id[i][0]) + '|| category_id -> ' + str(request_categories_id[i][0]) + '|| name_of_alcohol -> ' + str(request_subcategories[i][0]) + '\n'
+                mess += 'id -> ' + str(request_id[i][0]) + '|| category_id -> ' + str(
+                    request_categories_id[i][0]) + '|| name_of_alcohol -> ' + str(request_subcategories[i][0]) + '\n'
             mess += 'Введите id и нажмите одну из кнопок.'
             btnAllow = tb.types.InlineKeyboardButton(text='Добавить запись', callback_data='insert_allow_subcategory')
             btnBan = tb.types.InlineKeyboardButton(text='Удалить запись', callback_data='delete_ban_subcategory')
             markupInline.add(btnAllow, btnBan)
+            time.sleep(0.3)
             bot.send_message(message.chat.id, mess, reply_markup=markupInline)
         else:
             mess += 'К сожалению предложенных записей нет, увы!'
+            time.sleep(0.3)
             bot.send_message(message.chat.id, mess)
     else:
         request_values[0] = message.text
@@ -348,28 +385,47 @@ def text(message):
             btnAllow = tb.types.InlineKeyboardButton(text='Добавить запись', callback_data='insert_allow_alcohol_drink')
             btnBan = tb.types.InlineKeyboardButton(text='Удалить запись', callback_data='delete_ban_alcohol_drink')
             markupInline.add(btnAllow, btnBan)
+            time.sleep(0.3)
             bot.send_message(message.chat.id, mess, reply_markup=markupInline)
         else:
             mess += 'К сожалению предложенных записей нет, увы!'
+            time.sleep(0.3)
             bot.send_message(message.chat.id, mess)
     else:
         request_values[0] = message.text
 
+    # Если не админ
+    if message.text == 'Посмотреть предложенные категории' or message.text == 'Посмотреть предложенные подкатегории' \
+            or message.text == 'Посмотреть предложенные алкогольные напитки' and user_condition == 0:
+        mess = 'К сожалению у вас нет доступа к использованию этой функции!'
+        btnStart = tb.types.KeyboardButton('/start')
+        markup.add(btnStart)
+        bot.send_message(message.chat.id, mess, reply_markup=markup)
+
     # Полный рандом
     if message.text == 'Полный рандом!':
         db.open_connect()
-        random_alcohol_drink = choice(db.select_table('alcohol', 0, 1))
-        db.close_connect()
-        markup = tb.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
-        mess = f'Ваш напиток: {random_alcohol_drink[3]} {random_alcohol_drink[4]}' + '\n'
-        mess += f'Стоимость: {random_alcohol_drink[7]}' + '\n'
-        mess += f'Описание: {random_alcohol_drink[5]}' + '\n'
-        btn_again = tb.types.KeyboardButton('Полный рандом!')
-        btn_start = tb.types.KeyboardButton('/start')
-        markup.add(btn_again, btn_start)
-        mess += 'Фото:'
-        bot.send_message(message.chat.id, mess, reply_markup=markup)
-        bot.send_photo(message.chat.id, str(random_alcohol_drink[6]))
+        if len(db.select_table('alcohol', 0, 1)) > 0:
+            random_alcohol_drink = choice(db.select_table('alcohol', 0, 1))
+            db.close_connect()
+            markup = tb.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
+            mess = f'Ваш напиток: {random_alcohol_drink[3]} {random_alcohol_drink[4]}' + '\n'
+            mess += f'Стоимость: {random_alcohol_drink[7]}' + '\n'
+            mess += f'Описание: {random_alcohol_drink[5]}' + '\n'
+            btn_again = tb.types.KeyboardButton('Полный рандом!')
+            btn_start = tb.types.KeyboardButton('Категории')
+            markup.add(btn_again, btn_start)
+            mess += 'Фото:'
+            time.sleep(0.3)
+            bot.send_message(message.chat.id, mess, reply_markup=markup)
+            bot.send_photo(message.chat.id, str(random_alcohol_drink[6]))
+        else:
+            db.close_connect()
+            mess = 'К сожалению данные, работающие в этой функции, отсутствуют. Попробуйте выполнить те же действия, позже.'
+            btn_category = tb.types.KeyboardButton('Категории')
+            markup.add(btn_category)
+            time.sleep(0.3)
+            bot.send_message(message.chat.id, mess, reply_markup=markup)
 
     # Рандом категории!
     if message.text == 'Рандом категории!':
@@ -380,24 +436,35 @@ def text(message):
             if category_value[i][1] == is_category_random[0]:
                 category_id = category_value[i][0]
                 break
-        random_alcohol_drink_category = choice(db.select_table('alcohol', 1, 1, '', ('category_id',), (category_id,)))
-        db.close_connect()
-        markup = tb.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
-        mess = f'Ваш напиток: {random_alcohol_drink_category[3]} {random_alcohol_drink_category[4]}' + '\n'
-        mess += f'Стоимость: {random_alcohol_drink_category[7]}' + '\n'
-        mess += f'Описание: {random_alcohol_drink_category[5]}' + '\n'
-        btn_again = tb.types.KeyboardButton('Рандом категории!')
-        btn_start = tb.types.KeyboardButton('/start')
-        markup.add(btn_again, btn_start)
-        mess += 'Фото:'
-        bot.send_message(message.chat.id, mess, reply_markup=markup)
-        bot.send_photo(message.chat.id, str(random_alcohol_drink_category[6]))
+        if len(db.select_table('alcohol', 1, 1, '', ('category_id',), (category_id,))) > 0:
+            random_alcohol_drink_category = choice(
+                db.select_table('alcohol', 1, 1, '', ('category_id',), (category_id,)))
+            db.close_connect()
+            markup = tb.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
+            mess = f'Ваш напиток: {random_alcohol_drink_category[3]} {random_alcohol_drink_category[4]}' + '\n'
+            mess += f'Стоимость: {random_alcohol_drink_category[7]}' + '\n'
+            mess += f'Описание: {random_alcohol_drink_category[5]}' + '\n'
+            btn_again = tb.types.KeyboardButton('Рандом категории!')
+            btn_last_command = tb.types.KeyboardButton(last_command[0])
+            markup.add(btn_again, btn_last_command)
+            mess += 'Фото:'
+            time.sleep(0.3)
+            bot.send_message(message.chat.id, mess, reply_markup=markup)
+            bot.send_photo(message.chat.id, str(random_alcohol_drink_category[6]))
+        else:
+            db.close_connect()
+            mess = 'К сожалению данные, работающие в этой функции, отсутствуют. Попробуйте выполнить те же действия, позже.'
+            btn_last_command = tb.types.KeyboardButton(last_command[0])
+            markup.add(btn_last_command)
+            time.sleep(0.3)
+            bot.send_message(message.chat.id, mess, reply_markup=markup)
 
     # Рандом подкатегории!
     if message.text == 'Рандом подкатегории!':
         db.open_connect()
         category_value = db.select_table('category_alcohol', 1, 0, ('id', 'category'), ('is_visible',), (1,))
-        subcategory_value = db.select_table('subcategories_of_alcohol', 1, 0, ('id', 'name_of_alcohol'), ('is_visible',), (1,))
+        subcategory_value = db.select_table('subcategories_of_alcohol', 1, 0, ('id', 'name_of_alcohol'),
+                                            ('is_visible',), (1,))
         category_id = 0
         subcategory_id = 0
         for i in range(len(category_value)):
@@ -408,18 +475,30 @@ def text(message):
             if subcategory_value[j][1] == is_subcategory_random[0]:
                 subcategory_id = subcategory_value[j][0]
                 break
-        random_alcohol_drink_subcategory = choice(db.select_table('alcohol', 1, 1, '', ('category_id', 'subcategories_id'), (category_id, subcategory_id), ' AND '))
-        db.close_connect()
-        markup = tb.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
-        mess = f'Ваш напиток: {random_alcohol_drink_subcategory[3]} {random_alcohol_drink_subcategory[4]}' + '\n'
-        mess += f'Стоимость: {random_alcohol_drink_subcategory[7]}' + '\n'
-        mess += f'Описание: {random_alcohol_drink_subcategory[5]}' + '\n'
-        btn_again = tb.types.KeyboardButton('Рандом подкатегории!')
-        btn_start = tb.types.KeyboardButton('/start')
-        markup.add(btn_again, btn_start)
-        mess += 'Фото:'
-        bot.send_message(message.chat.id, mess, reply_markup=markup)
-        bot.send_photo(message.chat.id, str(random_alcohol_drink_subcategory[6]))
+        if len(db.select_table('alcohol', 1, 1, '', ('category_id', 'subcategories_id'), (category_id, subcategory_id),
+                               ' AND ')) > 0:
+            random_alcohol_drink_subcategory = choice(
+                db.select_table('alcohol', 1, 1, '', ('category_id', 'subcategories_id'), (category_id, subcategory_id),
+                                ' AND '))
+            db.close_connect()
+            markup = tb.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
+            mess = f'Ваш напиток: {random_alcohol_drink_subcategory[3]} {random_alcohol_drink_subcategory[4]}' + '\n'
+            mess += f'Стоимость: {random_alcohol_drink_subcategory[7]}' + '\n'
+            mess += f'Описание: {random_alcohol_drink_subcategory[5]}' + '\n'
+            btn_again = tb.types.KeyboardButton('Рандом подкатегории!')
+            btn_last_command = tb.types.KeyboardButton(last_command[1])
+            markup.add(btn_again, btn_last_command)
+            mess += 'Фото:'
+            time.sleep(0.3)
+            bot.send_message(message.chat.id, mess, reply_markup=markup)
+            bot.send_photo(message.chat.id, str(random_alcohol_drink_subcategory[6]))
+        else:
+            db.close_connect()
+            mess = 'К сожалению данные, работающие в этой функции, отсутствуют. Попробуйте выполнить те же действия, позже.'
+            btn_last_command = tb.types.KeyboardButton(last_command[1])
+            markup.add(btn_last_command)
+            time.sleep(0.3)
+            bot.send_message(message.chat.id, mess, reply_markup=markup)
 
     # split():
     # Добавить подкатегорию
@@ -428,10 +507,10 @@ def text(message):
         markupInline = tb.types.InlineKeyboardMarkup(row_width=1)
         btnInsert = tb.types.InlineKeyboardButton(text='Добавить подкатегорию', callback_data='insert_subcategories')
         markupInline.add(btnInsert)
+        time.sleep(0.3)
         bot.send_message(message.chat.id, mess, reply_markup=markupInline)
     else:
         insert_values = str(message.text).split('||')
-        pass
 
     # Добавить название
     if message.text == 'Добавить алкогольный напиток' and user_condition == 1:
@@ -439,11 +518,12 @@ def text(message):
         markupInline = tb.types.InlineKeyboardMarkup(row_width=1)
         btnInsert = tb.types.InlineKeyboardButton(text='Добавить напиток', callback_data='insert_alcohol_drink')
         markupInline.add(btnInsert)
+        time.sleep(0.3)
         bot.send_message(message.chat.id, mess, reply_markup=markupInline)
     else:
         insert_values = str(message.text).split('||')
-        pass
 
+    # Предложить
     # Подкатегорию
     if message.text == 'Предложить подкатегорию':
         mess = 'Введите ключ категории и название новой подкатегории, через ||:'
@@ -451,18 +531,21 @@ def text(message):
         btnRequestSubcategoryInline = tb.types.InlineKeyboardButton(text='Предложить подкатегорию',
                                                                     callback_data='request_subcategory')
         markupInline.add(btnRequestSubcategoryInline)
+        time.sleep(0.3)
         bot.send_message(message.chat.id, mess, reply_markup=markupInline)
     else:
         request_values = message.text.split('||')
         print()
 
-    # Напитки
+    # Предложить
+    # Напиток
     if message.text == 'Предложить алкогольный напиток':
         mess = 'Введите ключ категории, ключ подкатегории, название алкогольного напитка, количество алкоголя, описание, фото (ссылкой) и примерную цену, через ||:'
         markupInline = tb.types.InlineKeyboardMarkup(row_width=1)
         btnRequestAlcoholDrinkInline = tb.types.InlineKeyboardButton(text='Предложить алкогольный напиток',
                                                                      callback_data='request_alcohol_drink')
         markupInline.add(btnRequestAlcoholDrinkInline)
+        time.sleep(0.3)
         bot.send_message(message.chat.id, mess, reply_markup=markupInline)
     else:
         request_values = str(message.text).split('||')
@@ -473,6 +556,7 @@ def text(message):
         markupInline = tb.types.InlineKeyboardMarkup(row_width=1)
         btnInsert = tb.types.InlineKeyboardButton(text='Обновить категорию', callback_data='update_category')
         markupInline.add(btnInsert)
+        time.sleep(0.3)
         bot.send_message(message.chat.id, mess, reply_markup=markupInline)
     else:
         update_values = str(message.text).split('||')
@@ -483,6 +567,7 @@ def text(message):
         markupInline = tb.types.InlineKeyboardMarkup(row_width=1)
         btnInsert = tb.types.InlineKeyboardButton(text='Обновить подкатегорию', callback_data='update_subcategory')
         markupInline.add(btnInsert)
+        time.sleep(0.3)
         bot.send_message(message.chat.id, mess, reply_markup=markupInline)
     else:
         update_values = str(message.text).split('||')
@@ -495,13 +580,16 @@ def text(message):
         btnInsert = tb.types.InlineKeyboardButton(text='Обновить алкогольный напиток',
                                                   callback_data='update_alcohol_drink')
         markupInline.add(btnInsert)
+        time.sleep(0.3)
         bot.send_message(message.chat.id, mess, reply_markup=markupInline)
     else:
         update_values = str(message.text).split('||')
 
+    # Логи
     db.open_connect()
     now = dt.datetime.now()
-    db.insert_table('logs', ('user_name', 'action', 'performed_time'), (user_name, message.text, now.strftime('%d-%m-%Y %H:%M:%S')))
+    db.insert_table('logs', ('user_name', 'action', 'performed_time'),
+                    (user_name, message.text, now.strftime('%d-%m-%Y %H:%M:%S')))
     db.close_connect()
 
 
@@ -566,7 +654,6 @@ def callback_query(call):
 
         # Выход
         if call.data == 'exit':
-            login_as_admin = 0
             db.open_connect()
             db.update_table('admin', ('user_condition',), ('0',), ('id',), ('1',), )
             db.close_connect()
@@ -590,7 +677,8 @@ def callback_query(call):
         # Добавить подкатегорию
         if call.data == 'insert_subcategories' and user_condition == 1:
             db.open_connect()
-            db.insert_table('subcategories_of_alcohol', ('category_id', 'name_of_alcohol', 'is_visible',), (insert_values[0], insert_values[1], '1',))
+            db.insert_table('subcategories_of_alcohol', ('category_id', 'name_of_alcohol', 'is_visible',),
+                            (insert_values[0], insert_values[1], '1',))
             db.close_connect()
             mess = 'Запись успешно добавлена'
             markup = tb.types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -601,8 +689,11 @@ def callback_query(call):
         # Добавить название
         if call.data == 'insert_alcohol_drink' and user_condition == 1:
             db.open_connect()
-            db.insert_table('alcohol', ('category_id', 'subcategories_id', 'name_of_drink', 'alcohol_content', 'description', 'photo', 'price', 'is_visible',),
-                            (insert_values[0], insert_values[1], insert_values[2], insert_values[3], insert_values[4], insert_values[5], insert_values[6], '1',))
+            db.insert_table('alcohol', (
+                'category_id', 'subcategories_id', 'name_of_drink', 'alcohol_content', 'description', 'photo', 'price',
+                'is_visible',),
+                            (insert_values[0], insert_values[1], insert_values[2], insert_values[3], insert_values[4],
+                             insert_values[5], insert_values[6], '1',))
             db.close_connect()
             mess = 'Запись успешно добавлена'
             markup = tb.types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -624,7 +715,8 @@ def callback_query(call):
         # Обновить подкатегорию
         if call.data == 'update_subcategory' and user_condition == 1:
             db.open_connect()
-            db.update_table('subcategories_of_alcohol', ('category_id', 'name_of_alcohol',), (update_values[1], update_values[2]), ('id',), (update_values[0],), '')
+            db.update_table('subcategories_of_alcohol', ('category_id', 'name_of_alcohol',),
+                            (update_values[1], update_values[2]), ('id',), (update_values[0],), '')
             db.close_connect()
             mess = 'Запись успешно обновлена'
             markup = tb.types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -635,8 +727,10 @@ def callback_query(call):
         # Обновить алкогольный напиток
         if call.data == 'update_alcohol_drink' and user_condition == 1:
             db.open_connect()
-            db.update_table('alcohol', ('category_id', 'subcategories_id', 'name_of_drink', 'alcohol_content', 'description', 'photo', 'price'),
-                            (update_values[1], update_values[2], update_values[3], update_values[4], update_values[5], update_values[6], update_values[7]),
+            db.update_table('alcohol', (
+                'category_id', 'subcategories_id', 'name_of_drink', 'alcohol_content', 'description', 'photo', 'price'),
+                            (update_values[1], update_values[2], update_values[3], update_values[4], update_values[5],
+                             update_values[6], update_values[7]),
                             ('id',), (update_values[0],), '')
             db.close_connect()
             mess = 'Запись успешно обновлена'
@@ -681,37 +775,65 @@ def callback_query(call):
         # <- от Предложить запись
         # Выполнить insert для категорий от пользователя
         if call.data == 'request_category':
-            db.open_connect()
-            db.insert_table('category_alcohol', ('category',), (request_values[0],))
-            db.close_connect()
-            mess = 'Запись успешно предложена'
-            markup = tb.types.ReplyKeyboardMarkup(resize_keyboard=True)
-            btnStart = tb.types.KeyboardButton('/start')
-            markup.add(btnStart)
-            bot.send_message(call.message.chat.id, mess, reply_markup=markup)
+            if len(request_values) == 1:
+                db.open_connect()
+                db.insert_table('category_alcohol', ('category',), (request_values[0],))
+                db.close_connect()
+                mess = 'Запись успешно предложена'
+                markup = tb.types.ReplyKeyboardMarkup(resize_keyboard=True)
+                btnStart = tb.types.KeyboardButton('/start')
+                markup.add(btnStart)
+                bot.send_message(call.message.chat.id, mess, reply_markup=markup)
+            else:
+                db.close_connect()
+                mess = 'К сожалению вы неверно ввели данные, попробуйте ещё раз!'
+                markup = tb.types.ReplyKeyboardMarkup(resize_keyboard=True)
+                btnStart = tb.types.KeyboardButton('/start')
+                markup.add(btnStart)
+                bot.send_message(call.message.chat.id, mess, reply_markup=markup)
 
         # Выполнить insert для подкатегорий от пользователя
         if call.data == 'request_subcategory':
-            db.open_connect()
-            db.insert_table('subcategories_of_alcohol', ('category_id', 'name_of_alcohol'), (request_values[0], request_values[1]))
-            db.close_connect()
-            mess = 'Запись успешно предложена'
-            markup = tb.types.ReplyKeyboardMarkup(resize_keyboard=True)
-            btnStart = tb.types.KeyboardButton('/start')
-            markup.add(btnStart)
-            bot.send_message(call.message.chat.id, mess, reply_markup=markup)
+            if len(request_values) == 2:
+                db.open_connect()
+                db.insert_table('subcategories_of_alcohol', ('category_id', 'name_of_alcohol'),
+                                (request_values[0], request_values[1]))
+                db.close_connect()
+                mess = 'Запись успешно предложена'
+                markup = tb.types.ReplyKeyboardMarkup(resize_keyboard=True)
+                btnStart = tb.types.KeyboardButton('/start')
+                markup.add(btnStart)
+                bot.send_message(call.message.chat.id, mess, reply_markup=markup)
+            else:
+                db.close_connect()
+                mess = 'К сожалению вы неверно ввели данные, попробуйте ещё раз!'
+                markup = tb.types.ReplyKeyboardMarkup(resize_keyboard=True)
+                btnStart = tb.types.KeyboardButton('/start')
+                markup.add(btnStart)
+                bot.send_message(call.message.chat.id, mess, reply_markup=markup)
 
         # Выполнить insert для алкогольных напитков от пользователя
         if call.data == 'request_alcohol_drink':
-            db.open_connect()
-            db.insert_table('alcohol', ('category_id', 'subcategories_id', 'name_of_drink', 'alcohol_content', 'description', 'photo', 'price'),
-                            (request_values[0], request_values[1], request_values[2], request_values[3], request_values[4], request_values[5], request_values[6]))
-            db.close_connect()
-            mess = 'Запись успешно предложена'
-            markup = tb.types.ReplyKeyboardMarkup(resize_keyboard=True)
-            btnStart = tb.types.KeyboardButton('/start')
-            markup.add(btnStart)
-            bot.send_message(call.message.chat.id, mess, reply_markup=markup)
+            if len(request_values) == 7:
+                db.open_connect()
+                db.insert_table('alcohol', (
+                    'category_id', 'subcategories_id', 'name_of_drink', 'alcohol_content', 'description', 'photo',
+                    'price'),
+                                (request_values[0], request_values[1], request_values[2], request_values[3],
+                                 request_values[4], request_values[5], request_values[6]))
+                db.close_connect()
+                mess = 'Запись успешно предложена'
+                markup = tb.types.ReplyKeyboardMarkup(resize_keyboard=True)
+                btnStart = tb.types.KeyboardButton('/start')
+                markup.add(btnStart)
+                bot.send_message(call.message.chat.id, mess, reply_markup=markup)
+            else:
+                db.close_connect()
+                mess = 'К сожалению вы неверно ввели данные, попробуйте ещё раз!'
+                markup = tb.types.ReplyKeyboardMarkup(resize_keyboard=True)
+                btnStart = tb.types.KeyboardButton('/start')
+                markup.add(btnStart)
+                bot.send_message(call.message.chat.id, mess, reply_markup=markup)
 
         # <- от Предложенные записи
         # Категории
@@ -782,7 +904,8 @@ def callback_query(call):
 
     db.open_connect()
     now = dt.datetime.now()
-    db.insert_table('logs', ('user_name', 'action', 'performed_time'), (user_name, str(call.data), now.strftime('%d-%m-%Y %H:%M:%S')))
+    db.insert_table('logs', ('user_name', 'action', 'performed_time'),
+                    (user_name, str(call.data), now.strftime('%d-%m-%Y %H:%M:%S')))
     db.close_connect()
 
 
