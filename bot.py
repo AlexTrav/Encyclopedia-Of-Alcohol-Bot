@@ -39,8 +39,9 @@ def start(message):
     if user_condition == 1:
         btnSuggestedEntries = tb.types.InlineKeyboardButton(text='Предложенные записи',
                                                             callback_data='suggested_entries')
+        btnLogs = tb.types.InlineKeyboardButton(text='Логи', callback_data='logs')
         btnExit = tb.types.InlineKeyboardButton(text='Выйти из аккаунта', callback_data='exit')
-        markup.add(btnSuggestedEntries, btnExit)
+        markup.add(btnSuggestedEntries, btnLogs, btnExit)
     bot.send_message(message.chat.id, mess, reply_markup=markup)
     db.open_connect()
     now = dt.datetime.now()
@@ -395,8 +396,8 @@ def text(message):
         request_values[0] = message.text
 
     # Если не админ
-    if message.text == 'Посмотреть предложенные категории' or message.text == 'Посмотреть предложенные подкатегории' \
-            or message.text == 'Посмотреть предложенные алкогольные напитки' and user_condition == 0:
+    if (message.text == 'Посмотреть предложенные категории' or message.text == 'Посмотреть предложенные подкатегории'
+            or message.text == 'Посмотреть предложенные алкогольные напитки') and user_condition == 0:
         mess = 'К сожалению у вас нет доступа к использованию этой функции!'
         btnStart = tb.types.KeyboardButton('/start')
         markup.add(btnStart)
@@ -901,6 +902,28 @@ def callback_query(call):
             btnStart = tb.types.KeyboardButton('/start')
             markup.add(btnStart)
             bot.send_message(call.message.chat.id, mess, reply_markup=markup)
+
+        # Логи
+        if call.data == 'logs' and user_condition == 1:
+            db.open_connect()
+            if len(db.select_table('logs', 0, 1)) > 0:
+                logs = db.select_table('logs', 0, 1)
+                db.close_connect()
+                mess = ''
+                for i in range(len(logs)):
+                    mess += f'id -> {str(logs[i][0])}' + '\n'
+                    mess += f'user_name -> {logs[i][1]}' + '\n'
+                    mess += f'action -> {logs[i][2]}' + '\n'
+                    mess += f'performed_time -> {logs[i][3]}'
+                    bot.send_message(call.message.chat.id, mess)
+                    mess = ''
+                markup = tb.types.ReplyKeyboardMarkup(resize_keyboard=True)
+                btnStart = tb.types.KeyboardButton('/start')
+                markup.add(btnStart)
+                bot.send_message(call.message.chat.id, 'Назад', reply_markup=markup)
+            else:
+                mess = 'К сожалению логи пусты, попробуйте позже!'
+                bot.send_message(call.message.chat.id, mess)
 
     db.open_connect()
     now = dt.datetime.now()
