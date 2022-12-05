@@ -4,7 +4,7 @@ import telebot as tb
 from random import choice
 from database.db_command import DataBase
 
-bot = tb.TeleBot('5381314744:AAE1H24pXros7KCVNVJiS8e4a607I32U6WM')
+bot = tb.TeleBot('**************************************************')
 
 db = DataBase()
 
